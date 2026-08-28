@@ -355,6 +355,10 @@ export class RunManager {
         const args = parseObject(call.function.arguments);
         const deploymentId = stringValue(args?.deployment_id);
         if (!deploymentId) return undefined;
+        if (deploymentId !== this.lab.getIncident(DEMO_INCIDENT_ID).failedDeploymentId) {
+          this.fail(run, `The agent proposed rollback for ${deploymentId}, but the active incident deployment is ${this.lab.getIncident(DEMO_INCIDENT_ID).failedDeploymentId}.`);
+          return undefined;
+        }
         return {
           request: {
             actionId: `${run.id}:${ref.id}`,
@@ -371,6 +375,7 @@ export class RunManager {
       .find((candidate): candidate is PendingApprovalDetails => Boolean(candidate));
 
     if (!pending) {
+      if (run.state === 'FAILED') return;
       this.fail(run, 'TrueForge requested approval for an unsupported state-changing tool.');
       return;
     }

@@ -70,6 +70,13 @@ function rollbackCall(): TrueForgeApi.ModelMessageEvent {
   };
 }
 
+function rollbackCallFor(deploymentId: string): TrueForgeApi.ModelMessageEvent {
+  const call = rollbackCall();
+  const toolCall = call.toolCalls?.[0];
+  if (toolCall) toolCall.function.arguments = JSON.stringify({ deployment_id: deploymentId, reason: 'Model-provided rollback proposal.' });
+  return call;
+}
+
 function approvalRequired(): TrueForgeApi.ToolApprovalRequiredEvent {
   return {
     id: 'approval-event',
@@ -113,6 +120,18 @@ async function waitFor(predicate: () => boolean): Promise<void> {
 }
 
 describe('RunManager', () => {
+  it('rejects approval for a deployment other than the active incident deployment', async () => {
+    const lab = createIncidentLab({ now: () => new Date(createdAt) });
+    const runtime = new FakeRuntime([[rollbackCallFor('7d20c1'), approvalRequired(), turnDone('turn-done')]]);
+    const manager = new RunManager(lab, runtime, () => new Date(createdAt));
+
+    const run = manager.start('Investigate and fix the checkout incident.');
+    await waitFor(() => manager.get(run.id)?.state === 'FAILED');
+
+    expect(manager.get(run.id)?.error).toContain('active incident deployment is 8f31a2');
+    expect(lab.getIncident('INC-1042').status).toBe('open');
+  });
+
   it('marks the command activity failed when TrueForge cannot create a session', async () => {
     const lab = createIncidentLab({ now: () => new Date(createdAt) });
     const runtime = new FakeRuntime([], undefined, new Error('TrueForge is unavailable.'));
