@@ -1,0 +1,27 @@
+{
+  "incidentId": "INC-1042",
+  "unit": "percent",
+  "degraded": {
+    "errorRate": 18.4,
+    "p95LatencyMs": 1840,
+    "checkoutSuccessRate": 81.6,
+    "series": [
+      { "at": "09:20", "errorRate": 1.2, "p95LatencyMs": 290 },
+      { "at": "09:30", "errorRate": 1.5, "p95LatencyMs": 320 },
+      { "at": "09:40", "errorRate": 4.8, "p95LatencyMs": 710 },
+      { "at": "09:50", "errorRate": 15.1, "p95LatencyMs": 1510 },
+      { "at": "10:00", "errorRate": 18.4, "p95LatencyMs": 1840 }
+    ]
+  },
+  "recovered": {
+    "errorRate": 1.7,
+    "p95LatencyMs": 310,
+    "checkoutSuccessRate": 98.3,
+    "series": [
+      { "at": "10:10", "errorRate": 18.4, "p95LatencyMs": 1840 },
+      { "at": "10:20", "errorRate": 8.9, "p95LatencyMs": 960 },
+      { "at": "10:30", "errorRate": 3.1, "p95LatencyMs": 480 },
+      { "at": "10:40", "errorRate": 1.7, "p95LatencyMs": 310 }
+    ]
+  }
+}

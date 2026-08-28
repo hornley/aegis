@@ -1,0 +1,20 @@
+[
+  {
+    "id": "8f31a2",
+    "service": "checkout-api",
+    "commit": "8f31a2",
+    "deployedAt": "2026-08-28T09:38:00Z",
+    "status": "active",
+    "summary": "Switch payment client to pooled HTTP transport",
+    "change": "The new connection pool does not release sockets after provider timeouts."
+  },
+  {
+    "id": "7d20c1",
+    "service": "checkout-api",
+    "commit": "7d20c1",
+    "deployedAt": "2026-08-27T16:12:00Z",
+    "status": "superseded",
+    "summary": "Keep the previous payment client and timeout policy",
+    "change": "Known-good checkout path before the regression."
+  }
+]

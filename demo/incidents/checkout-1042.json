@@ -1,0 +1,10 @@
+{
+  "id": "INC-1042",
+  "title": "Checkout failures",
+  "service": "checkout-api",
+  "severity": "SEV-1",
+  "openedAt": "2026-08-28T09:42:00Z",
+  "description": "Checkout requests began timing out shortly after the latest checkout-api deployment.",
+  "normalErrorRate": 2,
+  "failedDeploymentId": "8f31a2"
+}

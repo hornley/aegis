@@ -1,0 +1,115 @@
+[
+  {
+    "at": "2026-08-28T09:39:12Z",
+    "level": "info",
+    "service": "checkout-api",
+    "phase": "before",
+    "deploymentId": "8f31a2",
+    "message": "checkout-api started with payment client pool size 32"
+  },
+  {
+    "at": "2026-08-28T09:40:04Z",
+    "level": "info",
+    "service": "checkout-api",
+    "phase": "before",
+    "deploymentId": "8f31a2",
+    "message": "checkout request completed",
+    "requestId": "req-1001"
+  },
+  {
+    "at": "2026-08-28T09:41:18Z",
+    "level": "warn",
+    "service": "checkout-api",
+    "phase": "before",
+    "deploymentId": "8f31a2",
+    "message": "payment provider request exceeded 500ms timeout",
+    "errorCode": "PAYMENT_TIMEOUT",
+    "requestId": "req-1002"
+  },
+  {
+    "at": "2026-08-28T09:42:03Z",
+    "level": "error",
+    "service": "checkout-api",
+    "phase": "before",
+    "deploymentId": "8f31a2",
+    "message": "checkout failed: payment provider request timed out",
+    "errorCode": "PAYMENT_TIMEOUT",
+    "requestId": "req-1003"
+  },
+  {
+    "at": "2026-08-28T09:42:11Z",
+    "level": "error",
+    "service": "checkout-api",
+    "phase": "before",
+    "deploymentId": "8f31a2",
+    "message": "checkout failed: payment provider request timed out",
+    "errorCode": "PAYMENT_TIMEOUT",
+    "requestId": "req-1004"
+  },
+  {
+    "at": "2026-08-28T09:43:27Z",
+    "level": "error",
+    "service": "checkout-api",
+    "phase": "before",
+    "deploymentId": "8f31a2",
+    "message": "connection pool exhausted while waiting for payment provider",
+    "errorCode": "POOL_EXHAUSTED",
+    "requestId": "req-1005"
+  },
+  {
+    "at": "2026-08-28T09:44:09Z",
+    "level": "error",
+    "service": "checkout-api",
+    "phase": "before",
+    "deploymentId": "8f31a2",
+    "message": "checkout failed: payment provider request timed out",
+    "errorCode": "PAYMENT_TIMEOUT",
+    "requestId": "req-1006"
+  },
+  {
+    "at": "2026-08-28T09:45:22Z",
+    "level": "error",
+    "service": "checkout-api",
+    "phase": "before",
+    "deploymentId": "8f31a2",
+    "message": "connection pool exhausted while waiting for payment provider",
+    "errorCode": "POOL_EXHAUSTED",
+    "requestId": "req-1007"
+  },
+  {
+    "at": "2026-08-28T10:20:02Z",
+    "level": "info",
+    "service": "checkout-api",
+    "phase": "after",
+    "deploymentId": "7d20c1",
+    "message": "checkout request completed",
+    "requestId": "req-2001"
+  },
+  {
+    "at": "2026-08-28T10:20:11Z",
+    "level": "info",
+    "service": "checkout-api",
+    "phase": "after",
+    "deploymentId": "7d20c1",
+    "message": "checkout request completed",
+    "requestId": "req-2002"
+  },
+  {
+    "at": "2026-08-28T10:20:23Z",
+    "level": "info",
+    "service": "checkout-api",
+    "phase": "after",
+    "deploymentId": "7d20c1",
+    "message": "checkout request completed",
+    "requestId": "req-2003"
+  },
+  {
+    "at": "2026-08-28T10:21:04Z",
+    "level": "info",
+    "service": "checkout-api",
+    "phase": "after",
+    "deploymentId": "7d20c1",
+    "message": "checkout request completed",
+    "requestId": "req-2004"
+  }
+]
