@@ -15,6 +15,7 @@
 - [x] `npm run lint` passes.
 - [x] `npm test` passes: 15 tests.
 - [x] `npm run build` passes.
+- [x] GitHub Actions CI passes on `main`.
 - [x] Rollback approval is bound to the active failed deployment.
 - [ ] OSS live run completes Code Mode, approval, rollback, and verification.
 
