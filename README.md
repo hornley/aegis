@@ -128,6 +128,8 @@ In TrueForge, add a custom model provider named `ollama` with base URL `http://1
 npm run check:ollama
 ```
 
+The Daytona snapshot used by Code Mode must include `bash` at `/usr/bin/bash` and `python3`. If the run trace reports `fork/exec /usr/bin/bash: no such file or directory`, update the Daytona snapshot/image in the TrueForge environment and rerun the verification. The provider manifest exposed by the current SDK does not select an image; this is a TrueForge/Daytona environment setting, not an Aegis application setting.
+
 Then start Aegis:
 
 ```bash
