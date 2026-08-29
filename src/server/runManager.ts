@@ -420,6 +420,11 @@ export class RunManager {
       run.state = 'REJECTED';
       return;
     }
+    if (run.state === 'VERIFYING' && this.lab.verifyRecovery(DEMO_INCIDENT_ID)) {
+      run.state = 'RESOLVED';
+      this.upsertActivity(run, this.activity('resolved', 'system', 'complete', 'Incident resolved', 'Verification passed: the error rate is below the normal threshold.'));
+      return;
+    }
     if (run.verificationObserved && this.lab.verifyRecovery(DEMO_INCIDENT_ID)) {
       run.state = 'RESOLVED';
       this.upsertActivity(run, this.activity('resolved', 'system', 'complete', 'Incident resolved', 'Verification passed: the error rate is below the normal threshold.'));
