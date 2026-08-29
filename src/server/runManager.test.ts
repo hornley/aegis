@@ -396,4 +396,76 @@ describe('RunManager', () => {
     expect(manager.get(run.id)?.error).toContain('verified recovery');
     expect(manager.get(run.id)?.state).not.toBe('RESOLVED');
   });
+
+  it('prevents cross-run verification: one run rollback does not resolve another run', async () => {
+    const lab = createIncidentLab({ now: () => new Date(createdAt) });
+    const makeRuntime = () =>
+      new FakeRuntime(
+        [
+          [turnCreated('turn-one'), rollbackCall(), approvalRequired(), turnDone('turn-one-done')],
+          [
+            {
+              id: 'rollback-response',
+              type: 'tool.response',
+              createdAt,
+              threadId: 'main',
+              toolCallId: 'call-rollback',
+              content: JSON.stringify({ restoredDeploymentId: '7d20c1' }),
+            },
+            {
+              id: 'message-metrics',
+              type: 'model.message',
+              createdAt,
+              threadId: 'main',
+              toolCalls: [
+                {
+                  id: 'call-metrics',
+                  type: 'function',
+                  function: { name: 'get_metrics', arguments: JSON.stringify({ incident_id: 'INC-1042' }) },
+                  toolInfo: {
+                    type: 'mcp',
+                    name: 'get_metrics',
+                    serverId: 'mcp-test',
+                    serverName: 'aegis-incident-lab',
+                  },
+                },
+              ],
+            },
+            {
+              id: 'metrics-response',
+              type: 'tool.response',
+              createdAt,
+              threadId: 'main',
+              toolCallId: 'call-metrics',
+              content: JSON.stringify({ errorRate: 1.7, recovered: true }),
+            },
+            finalMessage('resolved-message', 'RESOLVED: rollback completed and verification passed.'),
+            turnDone('turn-two-done'),
+          ],
+        ],
+        (approval) => {
+          if (approval.approval.status === 'allow') lab.rollbackDeployment('8f31a2', 'Approved by test operator.');
+        },
+      );
+
+    const manager = new RunManager(lab, makeRuntime(), () => new Date(createdAt));
+
+    const runA = manager.start('Investigate and fix the checkout incident.');
+    await waitFor(() => manager.get(runA.id)?.state === 'AWAITING_APPROVAL');
+    await manager.decide(runA.id, 'allow');
+    await waitFor(() => manager.get(runA.id)?.state === 'RESOLVED');
+
+    lab.reset();
+
+    const runtimeB = makeRuntime();
+    const managerB = new RunManager(lab, runtimeB, () => new Date(createdAt));
+    const runB = managerB.start('Investigate and fix the checkout incident.');
+    await waitFor(() => managerB.get(runB.id)?.state === 'AWAITING_APPROVAL');
+    await managerB.decide(runB.id, 'deny');
+    await waitFor(() => managerB.get(runB.id)?.state === 'REJECTED');
+
+    expect(manager.get(runA.id)?.state).toBe('RESOLVED');
+    expect(managerB.get(runB.id)?.state).toBe('REJECTED');
+    expect(lab.getIncident('INC-1042').status).toBe('open');
+  });
 });
