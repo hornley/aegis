@@ -24,6 +24,6 @@ The current Daytona sandbox image does not provide `/usr/bin/bash`. The OSS mode
 
 ## Review Evidence
 
-- [ ] Pull request URL recorded.
+- [x] Pull request URL recorded: https://github.com/hornley/aegis/pull/1
 - [ ] Qodo review result recorded.
 - [ ] Valid Qodo findings addressed or intentionally dismissed.

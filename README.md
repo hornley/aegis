@@ -203,7 +203,7 @@ The tests cover fixture validation, read-only tool behavior, direct rollback den
 
 ## Qodo Code Review Evidence
 
-The repository is published at https://github.com/hornley/aegis and the submission branch is `submission/oss-local-model`. No pull request or Qodo result is being claimed yet. Before submission, open the substantive PR from that branch, run Qodo, address valid findings, and replace this paragraph with the real PR URL, review findings, fixes, any intentionally dismissed finding, and follow-up review evidence.
+The repository is published at https://github.com/hornley/aegis. The OSS readiness work was merged in [PR #1](https://github.com/hornley/aegis/pull/1). GitHub reports no Qodo review result or review findings for that PR; no Qodo result is being claimed.
 
 ## AI Coding Assistant Disclosure
 
