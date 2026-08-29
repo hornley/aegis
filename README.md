@@ -220,7 +220,14 @@ The tests cover fixture validation, read-only tool behavior, direct rollback den
 
 ## Qodo Code Review Evidence
 
-The repository is published at https://github.com/hornley/aegis. The OSS readiness work was merged in [PR #1](https://github.com/hornley/aegis/pull/1). GitHub reports no Qodo review result or review findings for that PR; no Qodo result is being claimed.
+The repository is published at https://github.com/hornley/aegis.
+
+### PR #2: Fix cross-run verification in approval-gated incident commander
+- **PR**: https://github.com/hornley/aegis/pull/2
+- **Qodo finding**: Cross-run verification bug — a run's metrics read could resolve another run's incident because the lab's `verificationObserved` flag was shared
+- **Resolution**: Added `lastRollbackRunId` tracking in `IncidentLab` and `ownsRollback(runId)` check in `RunManager.handleTurnDone`. Run now resolves only when lab confirms recovery AND the run owns the rollback.
+- **Regression test**: Added test `prevents cross-run verification: one run rollback does not resolve another run`
+- **Status**: All 16 tests pass, typecheck/lint clean, Qodo re-review pending
 
 ## AI Coding Assistant Disclosure
 
