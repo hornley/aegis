@@ -1,0 +1,29 @@
+# Submission Checklist
+
+## Repository
+
+- [x] Source, fixtures, tests, and setup documentation are committed.
+- [x] `.env` and provider credentials are ignored.
+- [x] `main` is pushed to `https://github.com/hornley/aegis`.
+- [x] OSS submission branch is `submission/oss-local-model`.
+
+## Local Verification
+
+- [x] Ollama has a credential-free availability check.
+- [x] The configured Ollama model passes a structured tool-call probe.
+- [x] `npm run typecheck` passes.
+- [x] `npm run lint` passes.
+- [x] `npm test` passes: 15 tests.
+- [x] `npm run build` passes.
+- [x] Rollback approval is bound to the active failed deployment.
+- [ ] OSS live run completes Code Mode, approval, rollback, and verification.
+
+## Known External Blocker
+
+The current Daytona sandbox image does not provide `/usr/bin/bash`. The OSS model reaches the sandbox but its generated diagnostic currently fails there, so Aegis correctly leaves the incident unresolved. This is not represented as a successful recovery.
+
+## Review Evidence
+
+- [ ] Pull request URL recorded.
+- [ ] Qodo review result recorded.
+- [ ] Valid Qodo findings addressed or intentionally dismissed.

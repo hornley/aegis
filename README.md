@@ -203,7 +203,7 @@ The tests cover fixture validation, read-only tool behavior, direct rollback den
 
 ## Qodo Code Review Evidence
 
-This repository was initialized locally as a greenfield project and does not yet have a GitHub remote or a merged pull request. No Qodo result is being claimed. Before submission, the owner must push this repository, open a substantive PR, run Qodo, address valid findings, and replace this paragraph with the real PR URL, review findings, fixes, any intentionally dismissed finding, and follow-up review evidence.
+The repository is published at https://github.com/hornley/aegis and the submission branch is `submission/oss-local-model`. No pull request or Qodo result is being claimed yet. Before submission, open the substantive PR from that branch, run Qodo, address valid findings, and replace this paragraph with the real PR URL, review findings, fixes, any intentionally dismissed finding, and follow-up review evidence.
 
 ## AI Coding Assistant Disclosure
 
