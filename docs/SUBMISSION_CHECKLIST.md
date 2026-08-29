@@ -23,6 +23,16 @@
 
 The current Daytona sandbox image does not provide `/usr/bin/bash`. The OSS model reaches the sandbox but its generated diagnostic currently fails there, so Aegis correctly leaves the incident unresolved. This is not represented as a successful recovery.
 
+## Fix Available in Repo
+
+- `Dockerfile.trueforge-fixed` — extends TrueForge's sandbox image with `bash` and `python3`
+- `.github/workflows/build-trueforge-sandbox.yml` — builds and pushes to GHCR
+- Run the workflow once to publish: `ghcr.io/hornley/aegis/trueforge-sandbox-fixed:latest`
+- Configure TrueForge to use this image:
+  - Self-hosted: set `TRUEFORGE_SANDBOX_IMAGE=ghcr.io/hornley/aegis/trueforge-sandbox-fixed:latest`
+  - Restart TrueForge
+- After update, rerun `npm run check:ollama` — diagnostic should pass
+
 ## Review Evidence
 
 - [x] Pull request URL recorded: https://github.com/hornley/aegis/pull/1

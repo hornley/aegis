@@ -81,6 +81,21 @@ The agent's instructions require TrueForge Code Mode for the diagnostic. The gen
 
 TrueForge currently supports Daytona as its sandbox provider. A Daytona provider with snapshot creation permission is required for the live demo. The Aegis app does not implement a second, unsafe local code executor.
 
+### Fixed Sandbox Image (GHCR)
+
+The default TrueForge sandbox image lacks `/usr/bin/bash` and `python3`. This repo includes a fixed image:
+
+- **Dockerfile**: `Dockerfile.trueforge-fixed`
+- **GHCR image**: `ghcr.io/hornley/aegis/trueforge-sandbox-fixed:latest`
+- **Build workflow**: `.github/workflows/build-trueforge-sandbox.yml`
+
+To use it:
+1. Enable GHCR in repo settings (Actions → General → Workflow permissions → Read/write)
+2. Run the workflow manually (Actions → Build TrueForge Sandbox Image → Run workflow)
+3. Set TrueForge env var: `TRUEFORGE_SANDBOX_IMAGE=ghcr.io/hornley/aegis/trueforge-sandbox-fixed:latest`
+4. Restart TrueForge
+5. Verify: `npm run check:ollama`
+
 ## Human Approval
 
 The rollback request is not an Aegis UI convention. TrueForge pauses the turn with `tool.approval_required`. The backend extracts the pending tool call, displays the deployment, evidence, expected consequence, and reversibility, then resumes the same TrueForge session with `user.tool_approval`.

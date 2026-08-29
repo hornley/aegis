@@ -1,0 +1,4 @@
+FROM tfy.jfrog.io/tfy-images/trueforge-sandbox:0dab475d3d20a8333cff41f25f88e7134c424cf9
+RUN apt-get update && apt-get install -y bash python3 \
+    && ln -sf /bin/bash /usr/bin/bash \
+    && rm -rf /var/lib/apt/lists/*
