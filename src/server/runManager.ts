@@ -120,7 +120,7 @@ export class RunManager {
     if (run.busy) throw new Error('The agent is still processing the previous turn.');
 
     const pending = run.approval;
-    if (decision === 'allow') this.lab.authorizeRollback(pending.request.deploymentId);
+    if (decision === 'allow') this.lab.authorizeRollback(pending.request.deploymentId, run.id);
     run.approval = undefined;
     const approval: TrueForgeApi.UserToolApprovalEvent = {
       type: 'user.tool_approval',
@@ -420,12 +420,7 @@ export class RunManager {
       run.state = 'REJECTED';
       return;
     }
-    if (run.state === 'VERIFYING' && this.lab.verifyRecovery(DEMO_INCIDENT_ID)) {
-      run.state = 'RESOLVED';
-      this.upsertActivity(run, this.activity('resolved', 'system', 'complete', 'Incident resolved', 'Verification passed: the error rate is below the normal threshold.'));
-      return;
-    }
-    if (run.verificationObserved && this.lab.verifyRecovery(DEMO_INCIDENT_ID)) {
+    if (this.lab.verifyRecovery(DEMO_INCIDENT_ID) && this.lab.ownsRollback(run.id)) {
       run.state = 'RESOLVED';
       this.upsertActivity(run, this.activity('resolved', 'system', 'complete', 'Incident resolved', 'Verification passed: the error rate is below the normal threshold.'));
       return;

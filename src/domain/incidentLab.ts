@@ -109,6 +109,7 @@ interface MetricsFixture {
 interface ApprovalGrant {
   deploymentId: string;
   expiresAt: number;
+  runId?: string;
 }
 
 export interface IncidentLabOptions {
@@ -127,6 +128,7 @@ export class IncidentLab {
   private readonly approvalGrants = new Map<string, ApprovalGrant>();
   private recovered = false;
   private verificationObserved = false;
+  private lastRollbackRunId?: string;
   private recoveredErrorRate?: number;
 
   constructor(options: IncidentLabOptions = {}) {
@@ -210,11 +212,12 @@ export class IncidentLab {
       .slice(0, boundedLimit);
   }
 
-  authorizeRollback(deploymentId: string): void {
+  authorizeRollback(deploymentId: string, runId?: string): void {
     this.ensureFailedDeployment(deploymentId);
     this.approvalGrants.set(deploymentId, {
       deploymentId,
-      expiresAt: this.now().getTime() + 30_000,
+      expiresAt: this.now().getTime() + 120_000,
+      runId,
     });
   }
 
@@ -239,6 +242,7 @@ export class IncidentLab {
 
     this.approvalGrants.delete(deploymentId);
     this.recovered = true;
+    this.lastRollbackRunId = grant.runId;
     const beforeErrorRate = this.metrics.degraded.errorRate;
     return {
       deploymentId,
@@ -250,6 +254,10 @@ export class IncidentLab {
     };
   }
 
+  ownsRollback(runId: string): boolean {
+    return this.lastRollbackRunId === runId;
+  }
+
   verifyRecovery(incidentId: string): boolean {
     this.ensureIncident(incidentId);
     const metrics = this.metricsSnapshot();
@@ -259,6 +267,7 @@ export class IncidentLab {
   reset(): void {
     this.recovered = false;
     this.verificationObserved = false;
+    this.lastRollbackRunId = undefined;
     this.approvalGrants.clear();
   }
 
