@@ -77,6 +77,40 @@ function rollbackCallFor(deploymentId: string): TrueForgeApi.ModelMessageEvent {
   return call;
 }
 
+function sandboxRun(): TrueForgeApi.TurnStreamingEvent[] {
+  return [
+    {
+      id: 'sandbox-created',
+      type: 'sandbox.created',
+      createdAt,
+      threadId: null,
+      sandboxId: 'sandbox-test',
+    },
+    {
+      id: 'message-code',
+      type: 'model.message',
+      createdAt,
+      threadId: 'main',
+      toolCalls: [
+        {
+          id: 'call-code',
+          type: 'function',
+          function: { name: 'run_code', arguments: JSON.stringify({ code: 'print("diagnostic")' }) },
+          toolInfo: { type: 'truefoundry-system', name: 'run_code' },
+        },
+      ],
+    },
+    {
+      id: 'code-response',
+      type: 'tool.response',
+      createdAt,
+      threadId: 'main',
+      toolCallId: 'call-code',
+      content: '14 records analyzed; ROOT CAUSE correlated with 8f31a2',
+    },
+  ];
+}
+
 function approvalRequired(): TrueForgeApi.ToolApprovalRequiredEvent {
   return {
     id: 'approval-event',
@@ -148,7 +182,7 @@ describe('RunManager', () => {
   it('pauses on a real approval event and rejection leaves the incident open', async () => {
     const lab = createIncidentLab({ now: () => new Date(createdAt) });
     const runtime = new FakeRuntime([
-      [turnCreated('turn-one'), rollbackCall(), approvalRequired(), turnDone('turn-one-done')],
+      [turnCreated('turn-one'), ...sandboxRun(), rollbackCall(), approvalRequired(), turnDone('turn-one-done')],
       [finalMessage('rejected-message', 'The rollback was rejected. No remediation was executed.'), turnDone('turn-two-done')],
     ]);
     const manager = new RunManager(lab, runtime, () => new Date(createdAt));
@@ -273,7 +307,7 @@ describe('RunManager', () => {
     };
     const runtime = new FakeRuntime(
       [
-      [turnCreated('turn-one'), rollbackCall(), approvalRequired(), turnDone('turn-one-done')],
+      [turnCreated('turn-one'), ...sandboxRun(), rollbackCall(), approvalRequired(), turnDone('turn-one-done')],
       [
         {
           id: 'rollback-response',
@@ -314,7 +348,7 @@ describe('RunManager', () => {
   it('reports remediation failure instead of claiming recovery', async () => {
     const lab = createIncidentLab({ now: () => new Date(createdAt) });
     const runtime = new FakeRuntime([
-      [turnCreated('turn-one'), rollbackCall(), approvalRequired(), turnDone('turn-one-done')],
+      [turnCreated('turn-one'), ...sandboxRun(), rollbackCall(), approvalRequired(), turnDone('turn-one-done')],
       [
         {
           id: 'rollback-failure',
@@ -341,7 +375,7 @@ describe('RunManager', () => {
     const lab = createIncidentLab({ now: () => new Date(createdAt), recoveredErrorRate: 5 });
     const runtime = new FakeRuntime(
       [
-        [turnCreated('turn-one'), rollbackCall(), approvalRequired(), turnDone('turn-one-done')],
+        [turnCreated('turn-one'), ...sandboxRun(), rollbackCall(), approvalRequired(), turnDone('turn-one-done')],
         [
           {
             id: 'rollback-response',
@@ -402,7 +436,7 @@ describe('RunManager', () => {
     const makeRuntime = () =>
       new FakeRuntime(
         [
-          [turnCreated('turn-one'), rollbackCall(), approvalRequired(), turnDone('turn-one-done')],
+          [turnCreated('turn-one'), ...sandboxRun(), rollbackCall(), approvalRequired(), turnDone('turn-one-done')],
           [
             {
               id: 'rollback-response',
@@ -466,6 +500,21 @@ describe('RunManager', () => {
 
     expect(manager.get(runA.id)?.state).toBe('RESOLVED');
     expect(managerB.get(runB.id)?.state).toBe('REJECTED');
+    expect(lab.getIncident('INC-1042').status).toBe('open');
+  });
+
+  it('fails closed when rollback is proposed before a completed sandbox diagnostic', async () => {
+    const lab = createIncidentLab({ now: () => new Date(createdAt) });
+    const runtime = new FakeRuntime([
+      [turnCreated('turn-one'), rollbackCall(), approvalRequired(), turnDone('turn-one-done')],
+    ]);
+    const manager = new RunManager(lab, runtime, () => new Date(createdAt));
+    const run = manager.start('Investigate and fix the checkout incident.');
+
+    await waitFor(() => manager.get(run.id)?.state === 'FAILED');
+
+    expect(manager.get(run.id)?.error).toContain('before completing the required read-only sandbox diagnostic');
+    expect(lab.getMetrics('INC-1042').recovered).toBe(false);
     expect(lab.getIncident('INC-1042').status).toBe('open');
   });
 });

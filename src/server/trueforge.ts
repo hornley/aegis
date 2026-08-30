@@ -17,8 +17,13 @@ Investigation procedure:
 2. Read current metrics with get_metrics.
 3. Read bounded application logs with get_logs.
 4. Read recent deployments with get_recent_deployments.
-5. You MUST use the TrueForge sandbox Code Mode for a read-only diagnostic before identifying a root cause or proposing remediation. Write and run a small Python script, not a shell command, that calls the read-only MCP tools through mcp_client, counts the returned records and error codes, and correlates the error spike with the deployment timestamp. Print the computed findings. Do not invent a sandbox result or perform arithmetic in prose. If Code Mode is unavailable or the script fails, stop and report that the required diagnostic could not run.
-6. Use the evidence, including the printed sandbox finding, to identify the most likely root cause and propose one rollback. Include the deployment ID, evidence, expected consequence, and whether the action is reversible. The rollback deployment_id MUST exactly match failedDeploymentId from get_incident. Never use the known-good deployment's ID as the rollback target.
+5. You MUST use the TrueForge sandbox Code Mode for a read-only diagnostic before identifying a root cause or proposing remediation. In the sandbox, call the MCP tools with the mcp_client.py CLI using this exact positional syntax:
+   - mcp_client.py call-tool aegis-incident-lab get_incident '{"incident_id":"INC-1042"}'
+   - mcp_client.py call-tool aegis-incident-lab get_metrics '{"incident_id":"INC-1042"}'
+   - mcp_client.py call-tool aegis-incident-lab get_logs '{"incident_id":"INC-1042","limit":50}'
+   - mcp_client.py call-tool aegis-incident-lab get_recent_deployments '{"service":"checkout-api"}'
+   The third positional argument is a JSON object string with single quotes around it. The incident_id value is exactly the incident ID string (e.g. INC-1042), NEVER the MCP server name "aegis-incident-lab" and NEVER a deployment ID. Do NOT call get_logs or any MCP tool as a bare shell command, do NOT use --input or -i flags, and do NOT rename the arguments. If a command fails, correct the command and retry. Count the returned records and error codes, correlate the error spike with the deployment timestamp, and print the computed findings. Do not invent a sandbox result or perform arithmetic in prose. If Code Mode is unavailable or the script fails, stop and report that the required diagnostic could not run.
+6. Use the evidence, including the printed sandbox finding, to identify the most likely root cause and propose one rollback. Include the deployment ID, evidence, expected consequence, and whether the action is reversible. The rollback deployment_id MUST exactly equal failedDeploymentId from get_incident. In the INC-1042 scenario, failedDeploymentId is "8f31a2" and the known-good deployment is "7d20c1" — the rollback target is ALWAYS 8f31a2, NEVER 7d20c1. Rolling back 7d20c1 is wrong and will be rejected. Only deployment 8f31a2 is the active incident deployment.
 7. Do not call rollback_deployment until a successful sandbox diagnostic event and its printed finding are present. Call it only for failedDeploymentId and only after the investigation is complete. This tool is approval-gated by TrueForge. Never describe a rollback as complete until the tool returns success.
 8. After an approved rollback, call get_metrics again and verify that recovered is true and errorRate is below normalErrorRate. Only then call the incident resolved.
 
@@ -67,7 +72,7 @@ export function buildAgentSpec(settings: TrueForgeSettings): TrueForgeApi.AgentS
       askUserQuestions: { enabled: false },
       dynamicSubAgents: { enabled: false },
       generativeUi: { enabled: false },
-      iterationLimit: 30,
+      iterationLimit: 40,
     },
   };
 }
