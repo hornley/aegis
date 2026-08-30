@@ -17,7 +17,7 @@ services:
         npx -y @truefoundry/trueforge@latest --port 8791
       "
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8791/"]
+      test: ["CMD", "node", "-e", "fetch('http://localhost:8791/').then(r=>{process.exit(r.ok?0:1)}).catch(()=>process.exit(1))"]
       interval: 10s
       timeout: 5s
       retries: 10

@@ -101,7 +101,8 @@ export default function App() {
   const metrics = run?.metrics ?? demo?.metrics;
   const activity = run?.activity ?? [];
   const activeState = run?.state ?? 'IDLE';
-  const isOssModelFailure = run?.state === 'FAILED' && run?.error?.includes('verified recovery') && run?.metrics?.recovered === true;
+  const hasSandboxActivity = activity.some((item) => item.kind === 'sandbox');
+  const isOssModelFailure = run?.state === 'FAILED' && run?.error?.includes('verified recovery') && !hasSandboxActivity;
 
   if (loading) return <LoadingScreen />;
   if (!incident || !metrics) return <FailureScreen message={error ?? 'The incident lab did not return a usable snapshot.'} />;
