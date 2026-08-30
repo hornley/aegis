@@ -12,7 +12,7 @@ describe('Aegis TrueForge agent spec', () => {
     expect(spec.config).toMatchObject({
       sandbox: { enabled: true, fileDownloads: false },
       dynamicSubAgents: { enabled: false },
-      iterationLimit: 30,
+      iterationLimit: 40,
     });
     expect(spec.mcpServers?.[0]).toMatchObject({
       name: 'aegis-incident-lab',

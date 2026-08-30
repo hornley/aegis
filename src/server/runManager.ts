@@ -380,6 +380,14 @@ export class RunManager {
       return;
     }
 
+    const sandboxDiagnostic = run.activity.some(
+      (item) => item.kind === 'sandbox' && item.status === 'complete',
+    );
+    if (!sandboxDiagnostic) {
+      this.fail(run, 'The agent proposed a rollback before completing the required read-only sandbox diagnostic. The run failed closed without executing any state-changing tool.');
+      return;
+    }
+
     run.approval = pending;
     this.setFindingFromLab(run);
     this.setState(run, 'AWAITING_APPROVAL');

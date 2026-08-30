@@ -98,13 +98,12 @@ export function createIncidentMcpServer(lab: IncidentLab): McpServer {
       description: 'Read recent checkout deployments with commit, change summary, and active status.',
       inputSchema: {
         service: z.string().describe('Service name, for example checkout-api'),
-        limit: z.number().int().min(1).max(20).optional().describe('Maximum deployments to return'),
       },
       annotations: readOnlyAnnotations,
     },
-    ({ service, limit }) => {
+    ({ service }) => {
       try {
-        return jsonResult({ service, deployments: lab.getRecentDeployments(service, limit) });
+        return jsonResult({ service, deployments: lab.getRecentDeployments(service, 10) });
       } catch (error) {
         return errorResult(error);
       }

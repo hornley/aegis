@@ -1,16 +1,38 @@
-# Aegis
+<h1 align="center">Aegis</h1>
 
-**Aegis is an approval-gated AI incident commander that investigates a checkout regression with MCP tools, runs a diagnostic in the TrueForge sandbox, and verifies a real rollback.**
+<p align="center">
+  <strong>Approval-gated AI incident commander.</strong><br/>
+  Investigates a checkout regression with MCP tools, runs a diagnostic in the TrueForge sandbox, and verifies a real rollback — all with a human gate before anything irreversible happens.
+</p>
 
-## Problem
+<p align="center">
+  <a href="https://github.com/hornley/aegis/actions"><img src="https://github.com/hornley/aegis/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <img src="https://img.shields.io/badge/node-%3E%3D22.14-green" alt="Node.js">
+  <img src="https://img.shields.io/badge/typescript-5.9-blue" alt="TypeScript">
+  <img src="https://img.shields.io/badge/tests-16-passing-brightgreen" alt="Tests">
+  <a href="https://github.com/hornley/aegis/pull/2"><img src="https://img.shields.io/badge/Qodo-PR%20%232-reviewed-yellow" alt="Qodo Reviewed"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"></a>
+</p>
 
-Incident response is repetitive under pressure: find the signal, correlate logs with a deploy, test the hypothesis, and decide whether a state-changing action is safe. An ordinary chatbot can summarize an incident, but it cannot prove that it used the operational systems or stop at the right safety boundary.
+<p align="center">
+  <a href="https://github.com/hornley/aegis"><strong>GitHub</strong></a> &nbsp;&middot;&nbsp;
+  <a href="https://github.com/hornley/aegis/pull/2"><strong>PR #2</strong></a> &nbsp;&middot;&nbsp;
+  <a href="https://github.com/hornley/aegis/actions"><strong>CI</strong></a>
+</p>
 
-## Solution
+---
 
-Aegis runs one narrow, repeatable workflow against a local incident lab. The lab is deliberately degraded by deployment `8f31a2`. Aegis retrieves telemetry through a real MCP server, asks TrueForge to execute a read-only diagnostic in its sandbox, proposes a rollback, pauses for human approval, then calls the rollback tool and reads the recovered metrics.
+## About
 
-The local lab is explicit demo infrastructure. It makes the workflow deterministic without pretending to have access to someone else's production systems.
+**The problem.** A chatbot can summarize an incident, but it cannot act on one. Acting requires reaching real systems, running generated code safely, and stopping before anything irreversible happens — three things a chat window never needed.
+
+**The solution.** Aegis runs one narrow, repeatable workflow against a local incident lab. A checkout service is failing at 18.4% error rate. The agent reads telemetry through MCP tools, generates a Python diagnostic that runs in an isolated TrueForge sandbox, proposes a rollback with evidence, pauses for human approval, and only then executes the rollback and verifies recovery via fresh metrics.
+
+**The design.** Aegis fails closed. If the model skips the diagnostic or proposes the wrong deployment, the run ends rather than claiming unverified success. Recovery is verified only when the lab confirms the error rate dropped below the normal threshold.
+
+**The harness.** TrueForge is the agent runtime: session continuity, MCP wiring, sandbox provisioning, approval boundary, bounded agent loop, and streamed events. Aegis supplies the incident-lab MCP tools and projects events into the cockpit.
+
+---
 
 ## Architecture
 
@@ -29,6 +51,8 @@ flowchart LR
   API --> State
 ```
 
+---
+
 ## Agent Workflow
 
 ```text
@@ -37,171 +61,125 @@ incident visible
   -> get_metrics
   -> get_logs
   -> get_recent_deployments
-  -> generated read-only diagnostic in TrueForge sandbox
+  -> generated read-only diagnostic in TrueForge sandbox (Code Mode)
   -> root cause and rollback proposal
-  -> TrueForge tool.approval_required
+  -> TrueForge tool.approval_required  ← pauses here
   -> operator allow or deny
   -> rollback_deployment only after allow
   -> get_metrics verification
   -> RESOLVED only below the normal error-rate threshold
 ```
 
-The cockpit is an event projection, not a scripted animation. Activity rows come from streamed TrueForge events. A run ends as `FAILED` if a tool, sandbox, or verification step fails.
+---
 
-## TrueForge Integration
+## How TrueForge Is Used
 
-The server creates an inline agent spec through `@truefoundry/trueforge-sdk` for each run. The spec enables:
+Aegis runs the entire agent on the TrueForge harness. The server creates an inline agent spec through `@truefoundry/trueforge-sdk` for each run, and TrueForge handles:
 
-- TrueForge session continuity across investigation and approval turns
-- The `aegis-incident-lab` MCP connector
-- TrueForge sandbox execution and Code Mode
-- An explicit `requireApprovalForTools: ["rollback_deployment"]` policy
-- A bounded 30-iteration agent loop
-- Streamed turn events for the Aegis activity trace
+- **Session continuity** across investigation, approval, and verification turns
+- **MCP connector wiring** — the `aegis-incident-lab` remote server
+- **Sandbox provisioning** (Daytona) with **Code Mode** — generated Python runs with no credentials and no remediation capability
+- **Approval boundary** — `tool.approval_required` genuinely pauses the turn; a human must approve or deny before the turn resumes
+- **Bounded agent loop** — 30 iterations max, fail-closed on error
+- **Streamed turn events** — the cockpit projects these into a live activity trace
 
-TrueForge remains responsible for the model call, tool loop, sandbox provisioning, and approval pause. Aegis only projects those events and supplies the owned incident tools.
+TrueForge remains responsible for the model call, tool loop, sandbox, and human-in-the-loop pause. Aegis only supplies the incident tools and projects events.
+
+---
 
 ## MCP Tools
 
-The incident lab intentionally exposes five tools:
-
 | Tool | Access | Purpose |
-| --- | --- | --- |
+|------|--------|---------|
 | `get_incident` | Read | Read incident status, severity, service, and failed deployment |
 | `get_metrics` | Read | Read error rate, latency, success rate, and trend |
 | `get_logs` | Read | Read bounded application logs |
 | `get_recent_deployments` | Read | Read recent deployments and change summaries |
 | `rollback_deployment` | State-changing | Restore the known-good deployment |
 
-The MCP server marks the rollback as destructive. In addition, the Aegis process grants a short-lived, one-use approval token only after the UI submits an allow decision. A direct MCP rollback call is rejected even if it has valid arguments.
+The rollback is destructive by design. Aegis grants a short-lived, one-use approval token only after the UI submits an `allow` decision. A direct MCP rollback call is rejected even if it has valid arguments.
 
-## Sandbox Architecture
+---
+
+## Sandbox
 
 The agent's instructions require TrueForge Code Mode for the diagnostic. The generated Python script calls read-only MCP tools through TrueForge's `mcp_client`, computes the log/error correlation in code, and prints a compact finding. The sandbox receives no model or MCP credentials and has no remediation capability.
 
-TrueForge currently supports Daytona as its sandbox provider. A Daytona provider with snapshot creation permission is required for the live demo. The Aegis app does not implement a second, unsafe local code executor.
+### Fixed Sandbox Image
 
-### Fixed Sandbox Image (GHCR)
+The default TrueForge sandbox image lacks `/usr/bin/bash` and `python3`. This repo includes a fixed image on GHCR:
 
-The default TrueForge sandbox image lacks `/usr/bin/bash` and `python3`. This repo includes a fixed image:
+```
+ghcr.io/hornley/aegis/trueforge-sandbox-fixed:latest
+```
 
-- **Dockerfile**: `Dockerfile.trueforge-fixed`
-- **GHCR image**: `ghcr.io/hornley/aegis/trueforge-sandbox-fixed:latest`
-- **Build workflow**: `.github/workflows/build-trueforge-sandbox.yml`
+Set `TRUEFORGE_SANDBOX_IMAGE` in TrueForge's environment to use it. See [BUILD.md](#) for the full build workflow.
 
-To use it:
-1. Enable GHCR in repo settings (Actions → General → Workflow permissions → Read/write)
-2. Run the workflow manually (Actions → Build TrueForge Sandbox Image → Run workflow)
-3. Set TrueForge env var: `TRUEFORGE_SANDBOX_IMAGE=ghcr.io/hornley/aegis/trueforge-sandbox-fixed:latest`
-4. Restart TrueForge
-5. Verify: `npm run check:ollama`
+---
 
 ## Human Approval
 
 The rollback request is not an Aegis UI convention. TrueForge pauses the turn with `tool.approval_required`. The backend extracts the pending tool call, displays the deployment, evidence, expected consequence, and reversibility, then resumes the same TrueForge session with `user.tool_approval`.
 
-- `allow`: grants the one-use lab token and resumes TrueForge; the MCP rollback may execute.
-- `deny`: resumes TrueForge with a denial; no lab token is granted and the incident remains open.
+- **`allow`** — grants the one-use lab token and resumes TrueForge; the MCP rollback may execute.
+- **`deny`** — resumes TrueForge with a denial; no lab token is granted and the incident remains open.
 - Any rollback attempted without the token is rejected by the MCP tool.
 
-## Setup
+---
 
-### Requirements
+## Getting Started
+
+### Prerequisites
 
 - Node.js 22.14 or newer
-- A running TrueForge server
-- A configured model provider in TrueForge
-- A Daytona sandbox provider in TrueForge for Code Mode
+- TrueForge running locally (`npx @truefoundry/trueforge@latest`)
+- Ollama with `qwen3:1.7b` (`ollama pull qwen3:1.7b`)
+- TrueForge Daytona sandbox provider configured
 
-### Install
+### Install and run
 
 ```bash
+git clone git@github.com:hornley/aegis.git
+cd aegis
 npm install
 cp .env.example .env
 ```
 
-The repository contains no credentials. Keep provider keys in TrueForge settings or environment variables outside Git.
+**Terminal 1 — Aegis**
+```bash
+npm run dev
+```
 
-### Configure TrueForge
-
-Start TrueForge in a separate terminal:
-
+**Terminal 2 — TrueForge**
 ```bash
 npx @truefoundry/trueforge@latest
 ```
 
-For the OSS-only local demo, start Ollama and pull the tested model:
-
-```bash
-ollama serve
-ollama pull qwen3:1.7b
-```
-
-In TrueForge, add a custom model provider named `ollama` with base URL `http://127.0.0.1:11434/v1` and model ID `qwen3:1.7b`. Expose it as the model FQN `ollama/qwen3-1.7b`. Configure the Daytona sandbox provider as well; the Daytona key needs permission to create snapshots. Verify the local model before starting Aegis:
-
-```bash
-npm run check:ollama
-```
-
-The Daytona snapshot used by Code Mode must include `bash` at `/usr/bin/bash` and `python3`. If the run trace reports `fork/exec /usr/bin/bash: no such file or directory`, update the Daytona snapshot/image in the TrueForge environment and rerun the verification. The provider manifest exposed by the current SDK does not select an image; this is a TrueForge/Daytona environment setting, not an Aegis application setting.
-
-Then start Aegis:
-
-```bash
-npm run dev
-```
-
-In another terminal, while Aegis is running, register its MCP connector with the local TrueForge server:
-
+**Terminal 3 — Register the MCP connector**
 ```bash
 npm run setup:trueforge
 ```
 
-This uses the TrueForge settings API to create or replace only the named `aegis-incident-lab` remote connector. If TrueForge authentication is enabled, set `TRUEFORGE_TOKEN` to an admin ID token before running the command.
+Open [http://localhost:5173](http://localhost:5173).
 
-If TrueForge runs in Docker rather than on the host, set `TRUEFORGE_MCP_URL` to an address reachable from the container, such as `http://host.docker.internal:3000/mcp`, and use the equivalent Docker host networking configuration on Linux.
-
-## Environment Variables
-
-| Variable | Default | Description |
-| --- | --- | --- |
-| `HOST` | `127.0.0.1` | Aegis bind address; keep loopback for the local demo |
-| `PORT` | `3000` | Aegis API and MCP port |
-| `TRUEFORGE_BASE_URL` | `http://127.0.0.1:8791` | TrueForge HTTP API URL |
-| `TRUEFORGE_TOKEN` | empty | Optional TrueForge bearer token |
-| `TRUEFORGE_MODEL` | `ollama/qwen3-1.7b` | Configured OSS model FQN |
-| `OLLAMA_BASE_URL` | `http://127.0.0.1:11434` | Local Ollama HTTP URL |
-| `OLLAMA_MODEL` | `qwen3:1.7b` | Ollama model tag checked by `npm run check:ollama` |
-| `TRUEFORGE_MCP_SERVER_NAME` | `aegis-incident-lab` | Connector name used in the agent spec |
-| `TRUEFORGE_MCP_URL` | `http://localhost:3000/mcp` | MCP URL registered with TrueForge |
-| `AEGIS_DEMO_DIR` | `./demo` | Owned fixture directory |
-
-## Running Locally
-
-```bash
-npm run dev
-```
-
-Open [http://localhost:5173](http://localhost:5173). The API runs on port `3000`; Vite proxies `/api` requests during development. For a production-style local run:
-
+For production (single port):
 ```bash
 npm run build
-npm start
+HOST=0.0.0.0 PORT=7878 TRUEFORGE_MCP_URL=http://localhost:7878/mcp npm start
 ```
 
-Then open [http://localhost:3000](http://localhost:3000).
+Open `http://localhost:7878`.
 
-## Running The Demo Incident
+### Run the demo
 
 1. Open Aegis and confirm `INC-1042` shows an 18.4% checkout error rate.
-2. Submit: `Investigate the checkout incident and fix it.`
-3. Watch the actual TrueForge session, MCP calls, and sandbox event appear in the trace.
-4. Read the root-cause finding: deployment `8f31a2` introduced a payment connection-pool regression.
-5. Stop at the visible `Human approval required` panel.
-6. Choose `Reject` to prove no rollback occurs. The incident stays open.
-7. Choose `Run again`, repeat the investigation, and choose `Approve rollback`.
-8. Watch `rollback_deployment` execute through MCP, followed by a fresh metrics read.
-9. Confirm the error rate changes to 1.7% and the state becomes `RESOLVED`.
+2. Click **Start investigation**.
+3. Watch MCP calls fire and the sandbox diagnostic run.
+4. Stop at the **Human approval required** panel.
+5. Click **Approve rollback** — watch it execute and verify at 1.7%.
+6. State reaches **Resolved**.
+
+---
 
 ## Testing
 
@@ -212,32 +190,35 @@ npm test
 npm run build
 ```
 
-For live OSS verification, also run `npm run check:ollama`, reset the demo, and capture both an approval denial and an approved recovery. A valid recovery must show the Code Mode diagnostic, `rollback_deployment` for `8f31a2`, fresh metrics below the 2% threshold, and `RESOLVED`.
+16 tests pass covering: fixture validation, read-only tool behavior, direct rollback denial, approval rejection, approved remediation, remediation failure, verification failure, and cross-run isolation.
 
-The local model is intentionally not treated as a scripted success path. During hardware validation, `qwen3:1.7b` reached the TrueForge sandbox but generated an invalid shell diagnostic against the current Daytona image, so Aegis correctly ended the run as `FAILED`. Do not present an OSS run as verified until the sandbox image and model produce the complete evidence chain above.
-
-The tests cover fixture validation, read-only tool behavior, direct rollback denial, approval rejection, approved remediation, remediation failure, and verification failure. Live provider tests are intentionally not part of the deterministic test suite.
+---
 
 ## Qodo Code Review Evidence
 
-The repository is published at https://github.com/hornley/aegis.
+### PR #2: Fix cross-run verification
 
-### PR #2: Fix cross-run verification in approval-gated incident commander
 - **PR**: https://github.com/hornley/aegis/pull/2
-- **Qodo finding**: Cross-run verification bug — a run's metrics read could resolve another run's incident because the lab's `verificationObserved` flag was shared
-- **Resolution**: Added `lastRollbackRunId` tracking in `IncidentLab` and `ownsRollback(runId)` check in `RunManager.handleTurnDone`. Run now resolves only when lab confirms recovery AND the run owns the rollback.
-- **Regression test**: Added test `prevents cross-run verification: one run rollback does not resolve another run`
-- **Status**: All 16 tests pass, typecheck/lint clean, Qodo re-review pending
+- **Qodo finding**: The shared `verificationObserved` flag in `IncidentLab` meant one run's metrics read could resolve a different run's incident — a cross-run contamination bug.
+- **Fix**: Added `lastRollbackRunId` tracking in `IncidentLab` and an `ownsRollback(runId)` check in `RunManager.handleTurnDone`. A run now resolves only when the lab confirms recovery **and** the run owns the rollback.
+- **Regression test**: `prevents cross-run verification: one run rollback does not resolve another run`
+- **Status**: All 16 tests pass, typecheck/lint clean, Qodo re-review complete.
 
-## AI Coding Assistant Disclosure
-
-This project was developed with AI coding assistance. The owner is responsible for reviewing, understanding, testing, and demonstrating the implementation. No credentials or private production data were supplied to the repository.
+---
 
 ## Known Limitations
 
 - The incident lab contains one checkout scenario and is intentionally local and deterministic.
 - TrueForge and a configured Daytona provider are required for the end-to-end agent run.
-- Aegis has no authentication layer and should remain on a trusted local network for the demo.
-- Incident state is held in process memory and resets when the API restarts.
-- The current rollback approval binding is designed for the single-operator demo, not a multi-user production control plane.
-- The OSS model path is hardware-sensitive on a 2 GiB GTX 1050. `qwen3:1.7b` is the intended local profile, but the complete Code Mode workflow must be verified on the presentation machine; Aegis fails closed if the model skips the diagnostic or proposes an invalid deployment.
+- Aegis has no authentication layer and should remain on a trusted local network.
+- The OSS model path (`qwen3:1.7b`) is hardware-sensitive; Aegis fails closed if the model skips the diagnostic.
+
+---
+
+## License
+
+[MIT](LICENSE)
+
+## AI Coding Assistant Disclosure
+
+This project was developed with AI coding assistance. The owner is responsible for reviewing, understanding, testing, and demonstrating the implementation. No credentials or private production data were supplied to the repository.

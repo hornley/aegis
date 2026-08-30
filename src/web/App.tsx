@@ -101,6 +101,8 @@ export default function App() {
   const metrics = run?.metrics ?? demo?.metrics;
   const activity = run?.activity ?? [];
   const activeState = run?.state ?? 'IDLE';
+  const hasSandboxActivity = activity.some((item) => item.kind === 'sandbox');
+  const isOssModelFailure = run?.state === 'FAILED' && run?.error?.includes('verified recovery') && !hasSandboxActivity;
 
   if (loading) return <LoadingScreen />;
   if (!incident || !metrics) return <FailureScreen message={error ?? 'The incident lab did not return a usable snapshot.'} />;
@@ -187,7 +189,7 @@ export default function App() {
               <p className="eyebrow">Execution state</p>
               <h2>{run?.stateLabel ?? 'Ready for command'}</h2>
             </div>
-            <div className={`state-badge ${activeState.toLowerCase()}`}><span className="state-pulse" /> {activeState === 'IDLE' ? 'Awaiting command' : activeState}</div>
+            <div className={`state-badge ${activeState.toLowerCase()}`}><span className="state-pulse" /> {activeState === 'IDLE' ? 'Awaiting command' : activeState === 'FAILED' && isOssModelFailure ? 'OSS model skipped diagnostic' : activeState}</div>
           </div>
           <div className="state-rail">
             {WORKFLOW_STAGES.map((stage, index) => {
@@ -214,7 +216,7 @@ export default function App() {
 
         {run?.finalMessage && <section className="commander-note"><div className="note-icon"><ShieldCheck size={18} weight="bold" /></div><div><p className="eyebrow">Commander report</p><p>{run.finalMessage}</p></div></section>}
         {error && <div className="error-banner" role="alert"><Warning size={17} weight="fill" /><span>{error}</span></div>}
-        {run && isTerminal(run.state) && <div className="run-again-row"><span>{run.state === 'RESOLVED' ? 'The incident lab is recovered. Run the scenario again for another pass.' : run.state === 'REJECTED' ? 'The proposed rollback was not executed. Run again when you are ready.' : 'The run stopped without claiming success.'}</span><button className="secondary-button" onClick={() => { setRun(null); setError(null); }}><ArrowClockwise size={16} /> Run again</button></div>}
+        {run && isTerminal(run.state) && <div className="run-again-row"><span>{run.state === 'RESOLVED' ? 'The incident lab is recovered. Run the scenario again for another pass.' : run.state === 'REJECTED' ? 'The proposed rollback was not executed. Run again when you are ready.' : isOssModelFailure ? 'The OSS model skipped the required Code Mode diagnostic. Aegis fails closed by design — this is expected safety behavior, not a bug.' : 'The run stopped without claiming success.'}</span><button className="secondary-button" onClick={() => { setRun(null); setError(null); }}><ArrowClockwise size={16} /> Run again</button></div>}
 
         <footer className="page-footer"><span>Aegis / controlled incident lab</span><span><GitBranch size={14} /> TrueForge + MCP + sandbox</span></footer>
       </div>
