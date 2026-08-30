@@ -2,13 +2,9 @@ services:
   trueforge:
     image: node:22-alpine
     container_name: aegis-trueforge
-    ports:
-      - "8791:8791"
+    network_mode: host
     environment:
       - TRUEFORGE_SANDBOX_IMAGE=ghcr.io/hornley/aegis/trueforge-sandbox-fixed:latest
-      - OLLAMA_BASE_URL=http://host.docker.internal:11434
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     volumes:
       - trueforge-data:/home/node/.local/share/trueforge
     working_dir: /home/node
@@ -27,20 +23,17 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: aegis-app
-    ports:
-      - "7878:7878"
+    network_mode: host
     environment:
       - HOST=0.0.0.0
       - PORT=7878
-      - TRUEFORGE_BASE_URL=http://trueforge:8791
-      - TRUEFORGE_MCP_URL=http://aegis:7878/mcp
+      - TRUEFORGE_BASE_URL=http://localhost:8791
+      - TRUEFORGE_MCP_URL=http://localhost:7878/mcp
       - TRUEFORGE_MODEL=ollama/qwen3-1.7b
-      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - OLLAMA_BASE_URL=http://localhost:11434
       - OLLAMA_MODEL=qwen3:1.7b
       - TRUEFORGE_MCP_SERVER_NAME=aegis-incident-lab
       - AEGIS_DEMO_DIR=./demo
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     depends_on:
       trueforge:
         condition: service_healthy
