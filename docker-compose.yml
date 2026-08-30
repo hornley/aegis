@@ -1,26 +1,4 @@
-version: '3.8'
-
 services:
-  ollama:
-    image: ollama/ollama:latest
-    container_name: aegis-ollama
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama-data:/root/.ollama
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-
   trueforge:
     image: node:22-alpine
     container_name: aegis-trueforge
@@ -28,6 +6,9 @@ services:
       - "8791:8791"
     environment:
       - TRUEFORGE_SANDBOX_IMAGE=ghcr.io/hornley/aegis/trueforge-sandbox-fixed:latest
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - trueforge-data:/home/node/.local/share/trueforge
     working_dir: /home/node
@@ -35,9 +16,6 @@ services:
       sh -c "
         npx -y @truefoundry/trueforge@latest --port 8791
       "
-    depends_on:
-      ollama:
-        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8791/"]
       interval: 10s
@@ -57,14 +35,14 @@ services:
       - TRUEFORGE_BASE_URL=http://trueforge:8791
       - TRUEFORGE_MCP_URL=http://aegis:7878/mcp
       - TRUEFORGE_MODEL=ollama/qwen3-1.7b
-      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
       - OLLAMA_MODEL=qwen3:1.7b
       - TRUEFORGE_MCP_SERVER_NAME=aegis-incident-lab
       - AEGIS_DEMO_DIR=./demo
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       trueforge:
-        condition: service_healthy
-      ollama:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:7878/api/health"]
@@ -73,5 +51,4 @@ services:
       retries: 10
 
 volumes:
-  ollama-data:
   trueforge-data:
